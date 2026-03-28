@@ -1,7 +1,12 @@
 import '../models/index.dart';
+import '../utils/http_client_service.dart';
+import '../utils/api_constants.dart';
 
 class CarService {
-  // Mock data - in real app, this would call an API
+  static final CarService _instance = CarService._internal();
+  final _httpClient = HttpClientService();
+
+  // Mock data fallback for offline mode
   static final List<Car> _mockCars = [
     Car(
       id: '1',
@@ -95,13 +100,62 @@ class CarService {
     ),
   ];
 
-  // Fetch all cars
-  Future<List<Car>> getAllCars() async {
-    await Future.delayed(Duration(milliseconds: 500)); // Simulate API call
-    return _mockCars;
+  factory CarService() {
+    return _instance;
   }
 
-  // Search cars with filters
+  CarService._internal();
+
+  // Convert API response to Car object
+  Car _mapToCar(Map<String, dynamic> data) {
+    return Car(
+      id: data['id'].toString(),
+      name: data['name'] ?? '',
+      model: data['model'] ?? '',
+      year: data['year'] ?? DateTime.now().year,
+      type: data['type'] ?? 'Sedan',
+      dailyRate: (data['daily_rate'] ?? 0.0).toDouble(),
+      transmission: data['transmission'] ?? 'Automatic',
+      fuel: data['fuel'] ?? 'Petrol',
+      seats: data['seats'] ?? 5,
+      luggage: data['luggage'] ?? 300,
+      features: List<String>.from(data['features'] ?? []),
+      images: List<String>.from(data['images'] ?? []),
+      rating: (data['rating'] ?? 4.0).toDouble(),
+      reviews: data['reviews'] ?? 0,
+      registrationNumber: data['registration_number'] ?? '',
+      isAvailable: data['available'] ?? true,
+    );
+  }
+
+  // Fetch all cars from backend
+  Future<List<Car>> getAllCars() async {
+    try {
+      final response = await _httpClient.get(
+        ApiConstants.getCarsEndpoint,
+        includeAuth: false,
+      );
+
+      // Handle both array and object responses
+      List<dynamic> carList = [];
+      if (response is List) {
+        carList = response as List<dynamic>;
+      } else if (response is Map<String, dynamic>) {
+        if (response.containsKey('data') && response['data'] is List) {
+          carList = response['data'] as List<dynamic>;
+        }
+      }
+      
+      return carList.isEmpty
+          ? _mockCars
+          : carList.map((car) => _mapToCar(car as Map<String, dynamic>)).toList();
+    } catch (e) {
+      // Fallback to mock data
+      return _mockCars;
+    }
+  }
+
+  // Search cars with filters from backend
   Future<List<Car>> searchCars({
     required String location,
     required DateTime pickupDate,
@@ -111,32 +165,98 @@ class CarService {
     double? maxPrice,
     double? minRating,
   }) async {
-    await Future.delayed(Duration(milliseconds: 800)); // Simulate API call
+    try {
+      final queryParams = {
+        'location': location,
+        'pickupDate': pickupDate.toIso8601String(),
+        'dropoffDate': dropoffDate.toIso8601String(),
+      };
 
-    List<Car> filtered = _mockCars.where((car) {
-      if (carType != null && car.type != carType) return false;
-      if (minPrice != null && car.dailyRate < minPrice) return false;
-      if (maxPrice != null && car.dailyRate > maxPrice) return false;
-      if (minRating != null && car.rating < minRating) return false;
-      return car.isAvailable;
-    }).toList();
+      if (carType != null) queryParams['carType'] = carType;
+      if (minPrice != null) queryParams['minPrice'] = minPrice.toString();
+      if (maxPrice != null) queryParams['maxPrice'] = maxPrice.toString();
+      if (minRating != null) queryParams['minRating'] = minRating.toString();
 
-    return filtered;
+      final response = await _httpClient.get(
+        ApiConstants.getCarsEndpoint,
+        queryParameters: queryParams,
+        includeAuth: false,
+      );
+
+      // Handle both array and object responses
+      List<dynamic> carList = [];
+      if (response is List) {
+        carList = response as List<dynamic>;
+      } else if (response is Map<String, dynamic>) {
+        if (response.containsKey('data') && response['data'] is List) {
+          carList = response['data'] as List<dynamic>;
+        }
+      }
+      
+      return carList.isEmpty
+          ? _mockCars.where((car) {
+              if (carType != null && car.type != carType) return false;
+              if (minPrice != null && car.dailyRate < minPrice) return false;
+              if (maxPrice != null && car.dailyRate > maxPrice) return false;
+              if (minRating != null && car.rating < minRating) return false;
+              return car.isAvailable;
+            }).toList()
+          : carList.map((car) => _mapToCar(car as Map<String, dynamic>)).toList();
+    } catch (e) {
+      // Fallback to filtered mock data on error
+      return _mockCars.where((car) {
+        if (carType != null && car.type != carType) return false;
+        if (minPrice != null && car.dailyRate < minPrice) return false;
+        if (maxPrice != null && car.dailyRate > maxPrice) return false;
+        if (minRating != null && car.rating < minRating) return false;
+        return car.isAvailable;
+      }).toList();
+    }
   }
 
-  // Get car by ID
+  // Get car by ID from backend
   Future<Car?> getCarById(String id) async {
-    await Future.delayed(Duration(milliseconds: 300));
     try {
-      return _mockCars.firstWhere((car) => car.id == id);
+      final response = await _httpClient.get(
+        '${ApiConstants.getCarByIdEndpoint}/$id',
+        includeAuth: false,
+      );
+
+      return _mapToCar(response as Map<String, dynamic>);
     } catch (e) {
-      return null;
+      // Fallback to mock data
+      try {
+        return _mockCars.firstWhere((car) => car.id == id);
+      } catch (e) {
+        return null;
+      }
     }
   }
 
   // Get cars by type
   Future<List<Car>> getCarsByType(String type) async {
-    await Future.delayed(Duration(milliseconds: 400));
-    return _mockCars.where((car) => car.type == type).toList();
+    try {
+      final response = await _httpClient.get(
+        ApiConstants.getCarsEndpoint,
+        queryParameters: {'type': type},
+        includeAuth: false,
+      );
+
+      // Handle both array and object responses
+      List<dynamic> carList = [];
+      if (response is List) {
+        carList = response as List<dynamic>;
+      } else if (response is Map<String, dynamic>) {
+        if (response.containsKey('data') && response['data'] is List) {
+          carList = response['data'] as List<dynamic>;
+        }
+      }
+      
+      return carList.isEmpty
+          ? _mockCars.where((car) => car.type == type).toList()
+          : carList.map((car) => _mapToCar(car as Map<String, dynamic>)).toList();
+    } catch (e) {
+      return _mockCars.where((car) => car.type == type).toList();
+    }
   }
 }

@@ -2,8 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/index.dart';
 import 'screens/index.dart';
+import 'utils/http_client_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize HTTP client service
+  final httpClient = HttpClientService();
+  await httpClient.initialize();
+  
   runApp(const MyApp());
 }
 

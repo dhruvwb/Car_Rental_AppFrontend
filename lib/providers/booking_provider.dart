@@ -47,9 +47,12 @@ class BookingProvider extends ChangeNotifier {
         carRegistration: carRegistration,
         specialRequests: specialRequests,
       );
-      return _currentBooking != null;
+
+      notifyListeners();
+      return true;
     } catch (e) {
-      print('Error creating booking: $e');
+      _currentBooking = null;
+      notifyListeners();
       return false;
     } finally {
       _isLoading = false;

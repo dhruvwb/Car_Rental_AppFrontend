@@ -11,47 +11,61 @@ class AppDrawer extends StatelessWidget {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            // Drawer Header
-            Container(
-              padding: EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF0F67B1), Color(0xFF1e88e5)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 32,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.person, size: 40, color: Color(0xFF0F67B1)),
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    'John Doe',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+            // Drawer Header with User Info
+            Consumer<AuthProvider>(
+              builder: (context, authProvider, _) {
+                final user = authProvider.currentUser;
+                return Container(
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF0F67B1), Color(0xFF1e88e5)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    'john@example.com',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 32,
+                        backgroundColor: Colors.white,
+                        child: Text(
+                          user?.name.isNotEmpty == true
+                              ? user!.name[0].toUpperCase()
+                              : 'U',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F67B1),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      Text(
+                        user?.name ?? 'User',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        user?.email ?? 'user@example.com',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
             SizedBox(height: 20),
 
-            // Route Information
+            // Route Information  
             Consumer<LocationProvider>(
               builder: (context, locationProvider, _) {
                 if (locationProvider.pickupLocation != null ||
@@ -186,37 +200,65 @@ class AppDrawer extends StatelessWidget {
               context,
               icon: Icons.home_outlined,
               label: 'Home',
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/home');
+              },
             ),
             _buildDrawerItem(
               context,
               icon: Icons.directions_car_outlined,
               label: 'My Bookings',
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('My Bookings feature coming soon')),
+                );
+              },
             ),
             _buildDrawerItem(
               context,
               icon: Icons.favorite_outline,
               label: 'Saved Locations',
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Saved Locations feature coming soon')),
+                );
+              },
             ),
             _buildDrawerItem(
               context,
               icon: Icons.payment_outlined,
               label: 'Payment Methods',
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Payment Methods feature coming soon')),
+                );
+              },
             ),
             _buildDrawerItem(
               context,
               icon: Icons.settings_outlined,
               label: 'Settings',
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Settings feature coming soon')),
+                );
+              },
             ),
             _buildDrawerItem(
               context,
               icon: Icons.help_outline,
               label: 'Help & Support',
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Help & Support feature coming soon')),
+                );
+              },
             ),
             SizedBox(height: 20),
             Divider(color: Colors.grey[300]),
@@ -225,12 +267,40 @@ class AppDrawer extends StatelessWidget {
               context,
               icon: Icons.logout_outlined,
               label: 'Logout',
-              onTap: () => Navigator.pop(context),
+              onTap: () => _handleLogout(context),
               isDestructive: true,
             ),
           ],
         ),
       ),
+    );
+  }
+
+  void _handleLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Logout'),
+          content: Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () => Navigator.pop(context),
+            ),
+            TextButton(
+              child: Text('Logout', style: TextStyle(color: Colors.red)),
+              onPressed: () {
+                final authProvider = context.read<AuthProvider>();
+                authProvider.logout();
+                Navigator.pop(context); // Close dialog
+                Navigator.pop(context); // Close drawer
+                Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
