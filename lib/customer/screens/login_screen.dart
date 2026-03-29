@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -199,25 +200,71 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Skip Option
+              // Bottom Links: Skip for now | Sign Up | Admin Login
               Center(
-                child: GestureDetector(
-                  onTap: _handleSkip,
-                  child: RichText(
-                    text: const TextSpan(
-                      text: "Don't have an account? ",
-                      style: TextStyle(color: Color(0xFF6B7280)),
-                      children: [
-                        TextSpan(
-                          text: 'Skip for now',
-                          style: TextStyle(
-                            color: Color(0xFF0F67B1),
-                            fontWeight: FontWeight.bold,
-                          ),
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  children: [
+                    GestureDetector(
+                      onTap: _handleSkip,
+                      child: RichText(
+                        text: const TextSpan(
+                          text: "Don't have an account? ",
+                          style: TextStyle(color: Color(0xFF6B7280)),
+                          children: [
+                            TextSpan(
+                              text: 'Skip for now',
+                              style: TextStyle(
+                                color: Color(0xFF0F67B1),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    Container(
+                      height: 16,
+                      width: 1,
+                      color: Color(0xFFE5E7EB),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const SignUpScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'Sign Up',
+                        style: TextStyle(
+                          color: Color(0xFF0F67B1),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      height: 16,
+                      width: 1,
+                      color: Color(0xFFE5E7EB),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).pushNamed('/admin_login');
+                      },
+                      child: const Text(
+                        'Admin Login',
+                        style: TextStyle(
+                          color: Color(0xFF0F67B1),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

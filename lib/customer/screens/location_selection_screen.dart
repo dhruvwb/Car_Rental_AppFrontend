@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/location.dart';
+import '../../models/location.dart';
 import '../providers/location_provider.dart';
 
 class LocationSelectionScreen extends StatefulWidget {

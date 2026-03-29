@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/index.dart';
+import '../../models/index.dart';
 import '../services/index.dart';
 
 class BookingProvider extends ChangeNotifier {
@@ -33,6 +33,9 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      print('📅 [BookingProvider] Starting booking creation...');
+      print('   CarID: $carId, Dates: $pickupDate to $dropoffDate');
+      
       _currentBooking = await _bookingService.createBooking(
         userId: userId,
         carId: carId,
@@ -48,9 +51,11 @@ class BookingProvider extends ChangeNotifier {
         specialRequests: specialRequests,
       );
 
+      print('✅ [BookingProvider] Booking created successfully: ${_currentBooking?.id}');
       notifyListeners();
       return true;
     } catch (e) {
+      print('❌ [BookingProvider] Booking creation failed: $e');
       _currentBooking = null;
       notifyListeners();
       return false;

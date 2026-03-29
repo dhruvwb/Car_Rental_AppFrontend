@@ -1,6 +1,6 @@
-import '../models/index.dart';
-import '../utils/http_client_service.dart';
-import '../utils/api_constants.dart';
+import '../../models/index.dart';
+import '../../utils/http_client_service.dart';
+import '../../utils/api_constants.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -74,6 +74,8 @@ class AuthService {
     required String drivingLicense,
   }) async {
     try {
+      // Note: Backend currently only supports name, email, password, phone
+      // Driving license will be handled separately in profile update
       final response = await _httpClient.post(
         ApiConstants.registerEndpoint,
         {
@@ -81,7 +83,6 @@ class AuthService {
           'email': email,
           'password': password,
           'phone': phone,
-          'driving_license_number': drivingLicense,
         },
         includeAuth: false,
       );

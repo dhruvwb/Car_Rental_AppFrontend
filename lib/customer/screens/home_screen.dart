@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/index.dart';
-import '../widgets/index.dart';
-import '../models/car.dart';
-import '../models/location.dart';
-import '../utils/pricing_constants.dart';
+import '../../widgets/index.dart';
+import '../../models/car.dart';
+import '../../models/location.dart';
+import '../../utils/pricing_constants.dart';
 import 'search_results_screen.dart';
 import 'login_screen.dart';
 import 'dynamic_location_selection_screen.dart';

@@ -79,17 +79,30 @@ class HttpClientService {
   }) async {
     try {
       final url = Uri.parse(ApiConstants.baseUrl + endpoint);
+      final encodedBody = jsonEncode(body);
+      final headers = _getHeaders(includeAuth: includeAuth);
+
+      // Log request details
+      print('🔵 [POST Request]');
+      print('   URL: $url');
+      print('   Headers: $headers');
+      print('   Body: $encodedBody');
 
       final response = await http
           .post(
             url,
-            headers: _getHeaders(includeAuth: includeAuth),
-            body: jsonEncode(body),
+            headers: headers,
+            body: encodedBody,
           )
           .timeout(ApiConstants.timeoutDuration);
 
+      // Log response details
+      print('🟢 [Response] Status: ${response.statusCode}');
+      print('   Body: ${response.body}');
+
       return _handleResponse(response);
     } catch (e) {
+      print('🔴 [POST Error] $e');
       throw _handleError(e);
     }
   }

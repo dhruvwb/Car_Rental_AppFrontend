@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/location.dart';
+import '../../models/location.dart';
 import '../providers/location_provider.dart';
 import '../services/location_search_service.dart';
 import 'enquiry_form_screen.dart';

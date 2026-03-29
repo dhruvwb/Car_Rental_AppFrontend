@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/index.dart';
+import '../../models/index.dart';
 import '../providers/index.dart';
-import '../widgets/index.dart';
-import '../utils/pricing_constants.dart';
+import '../providers/auth_provider.dart';
+import '../../widgets/index.dart';
+import '../../utils/pricing_constants.dart';
 import 'booking_confirmation_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
@@ -412,49 +413,105 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       height: 56,
                       child: ElevatedButton(
                         onPressed: _agreedToTerms
-                            ? () {
+                            ? () async {
                                 setState(() {
                                   _isProcessing = true;
                                 });
-                                Future.delayed(Duration(seconds: 2), () {
-                                  if (mounted) {
-                                    // Create booking object
-                                    final booking = Booking(
-                                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                                      userId: 'user_123', // Replace with actual user ID from provider
-                                      carId: widget.car.id,
-                                      pickupDate: widget.pickupDate,
-                                      dropoffDate: widget.dropoffDate,
-                                      pickupLocation: widget.pickupLocation,
-                                      dropoffLocation: widget.pickupLocation,
-                                      dailyRate: widget.car.dailyRate,
-                                      numberOfDays: widget.numberOfDays,
-                                      insuranceType: widget.selectedInsurance,
-                                      insuranceCost: (PricingConstants.insuranceCosts[widget.selectedInsurance] ?? 0.0) * widget.numberOfDays,
-                                      addOns: widget.selectedAddOns
-                                          .map((addonName) => {
-                                                'name': addonName,
-                                                'cost': PricingConstants.addOnsCosts[addonName] ?? 0.0,
-                                              })
-                                          .toList(),
-                                      subtotal: subtotal,
-                                      tax: tax,
-                                      totalCost: total,
-                                      status: 'Confirmed',
-                                      bookingDate: DateTime.now(),
+
+                                try {
+                                  print('🔵 [CheckoutScreen] Starting booking process...');
+                                  
+                                  // Get current user from auth provider
+                                  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                                  final currentUser = authProvider.currentUser;
+                                  
+                                  if (currentUser == null) {
+                                    print('❌ [CheckoutScreen] No user logged in!');
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Please login first'), backgroundColor: Colors.red),
+                                    );
+                                    setState(() {
+                                      _isProcessing = false;
+                                    });
+                                    return;
+                                  }
+
+                                  print('👤 [CheckoutScreen] User: ${currentUser.email}');
+
+                                  // Prepare add-ons as list of maps
+                                  final addOnsData = widget.selectedAddOns
+                                      .map((addonName) => {
+                                            'name': addonName,
+                                            'cost': PricingConstants.addOnsCosts[addonName] ?? 0.0,
+                                          })
+                                      .toList();
+
+                                  print('📋 [CheckoutScreen] Add-ons: $addOnsData');
+
+                                  // Call BookingProvider.createBooking
+                                  final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+                                  final success = await bookingProvider.createBooking(
+                                    userId: currentUser.id,
+                                    carId: widget.car.id,
+                                    pickupDate: widget.pickupDate,
+                                    dropoffDate: widget.dropoffDate,
+                                    pickupLocation: widget.pickupLocation,
+                                    dropoffLocation: widget.pickupLocation,
+                                    dailyRate: widget.car.dailyRate,
+                                    insuranceType: widget.selectedInsurance,
+                                    insuranceCost: (PricingConstants.insuranceCosts[widget.selectedInsurance] ?? 0.0) * widget.numberOfDays,
+                                    addOns: addOnsData,
+                                    carRegistration: widget.car.registrationNumber,
+                                  );
+
+                                  print('🚗 [CheckoutScreen] Booking result: $success');
+
+                                  if (!mounted) return;
+
+                                  if (success && bookingProvider.currentBooking != null) {
+                                    print('✅ [CheckoutScreen] Booking successful! ID: ${bookingProvider.currentBooking!.id}');
+                                    
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Booking created successfully!'),
+                                        backgroundColor: Colors.green,
+                                      ),
                                     );
 
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) => BookingConfirmationScreen(
-                                          booking: booking,
+                                          booking: bookingProvider.currentBooking!,
                                           car: widget.car,
                                         ),
                                       ),
                                     );
+                                  } else {
+                                    print('❌ [CheckoutScreen] Booking failed');
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Booking failed. Please try again.'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                    setState(() {
+                                      _isProcessing = false;
+                                    });
                                   }
-                                });
+                                } catch (e) {
+                                  print('❌ [CheckoutScreen] Exception: $e');
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  setState(() {
+                                    _isProcessing = false;
+                                  });
+                                }
                               }
                             : null,
                         style: ElevatedButton.styleFrom(

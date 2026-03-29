@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/index.dart';
+import '../../models/index.dart';
 import '../providers/index.dart';
 import '../services/enquiry_service.dart';
 

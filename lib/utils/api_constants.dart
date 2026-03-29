@@ -1,9 +1,10 @@
 class ApiConstants {
   // Backend base URL - Change this to your actual backend URL
-  // For local development, use: http://10.0.2.2:5000 (Android emulator)
+  // For local development (Web/Chrome): http://localhost:5000
+  // For Android emulator: http://10.0.2.2:5000
   // For physical device: http://YOUR_MACHINE_IP:5000
   // For production: https://your-production-domain.com
-  static const String baseUrl = 'http://10.0.2.2:5000';
+  static const String baseUrl = 'http://localhost:5000';
   static const String apiVersion = '/api/v1';
 
   // Auth Endpoints
@@ -18,12 +19,17 @@ class ApiConstants {
   // Bookings Endpoints
   static const String createBookingEndpoint = '$apiVersion/bookings';
   static const String getBookingsEndpoint = '$apiVersion/bookings';
+  static const String getAdminBookingsEndpoint = '$apiVersion/bookings/admin/all-bookings';
   static const String getBookingByIdEndpoint = '$apiVersion/bookings';
   static const String cancelBookingEndpoint = '$apiVersion/bookings';
 
   // Users Endpoints
   static const String getUserProfileEndpoint = '$apiVersion/users/profile';
   static const String updateUserProfileEndpoint = '$apiVersion/users/profile';
+
+  // Enquiries Endpoints
+  static const String getAllEnquiriesAdminEndpoint = '$apiVersion/enquiries';
+  static const String respondToEnquiryEndpoint = '$apiVersion/enquiries';
 
   // Health check
   static const String healthCheckEndpoint = '/api/health';

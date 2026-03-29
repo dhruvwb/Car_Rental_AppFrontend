@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import '../models/index.dart';
+import '../../models/index.dart';
+import '../../utils/pricing_constants.dart';
 
 class LocationProvider extends ChangeNotifier {
   Location? _pickupLocation;
   Location? _dropoffLocation;
   double _distanceKm = 0;
-  double _pricePerKm = 15.0; // Default price per km
+  double _pricePerKm = PricingConstants.pricePerKm; // 1 RS per KM
   double _totalPrice = 0;
 
   // Getters
@@ -14,6 +15,9 @@ class LocationProvider extends ChangeNotifier {
   double get distanceKm => _distanceKm;
   double get pricePerKm => _pricePerKm;
   double get totalPrice => _totalPrice;
+  
+  // Formatted price getter
+  String get formattedTotalPrice => PricingConstants.formatPrice(_totalPrice);
 
   // Setters with automatic price calculation
   void setPickupLocation(Location location) {
@@ -32,6 +36,19 @@ class LocationProvider extends ChangeNotifier {
     _pricePerKm = price;
     _calculatePrice();
     notifyListeners();
+  }
+
+  void setDistance(double distanceKm) {
+    _distanceKm = distanceKm;
+    _calculatePrice();
+    notifyListeners();
+  }
+
+  Future<double> calculateDistance(Location destination) async {
+    if (_pickupLocation != null) {
+      return Location.calculateDistance(_pickupLocation!, destination);
+    }
+    return 0;
   }
 
   void _calculatePrice() {

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/index.dart';
+import 'admin/providers/admin_provider.dart';
 import 'screens/index.dart';
+import 'screens/role_selection_screen.dart';
+import 'admin/screens/admin_login_screen.dart';
+import 'admin/screens/admin_dashboard_screen.dart';
+import 'widgets/notification_widget.dart';
 import 'utils/http_client_service.dart';
 
 void main() async {
@@ -22,15 +27,18 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => AdminProvider()),
         ChangeNotifierProvider(create: (_) => CarProvider()),
         ChangeNotifierProvider(create: (_) => BookingProvider()),
         ChangeNotifierProvider(create: (_) => LocationProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
-      child: MaterialApp(
-        title: 'Car Rental App',
-        theme: ThemeData(
-          useMaterial3: true,
-          scaffoldBackgroundColor: Color(0xFAFAFB),
+      child: NotificationOverlay(
+        child: MaterialApp(
+          title: 'Car Rental App',
+          theme: ThemeData(
+            useMaterial3: true,
+            scaffoldBackgroundColor: Color(0xFAFAFB),
           primaryColor: Color(0xFF0F67B1),
           colorScheme: ColorScheme.light(
             primary: Color(0xFF0F67B1),
@@ -122,14 +130,18 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         routes: {
           '/splash': (context) => const SplashScreen(),
+          '/role_selection': (context) => const RoleSelectionScreen(),
           '/login': (context) => const LoginScreen(),
           '/home': (context) => const HomeScreen(),
+          '/admin_login': (context) => const AdminLoginScreen(),
+          '/admin_dashboard': (context) => const AdminDashboardScreen(),
           // Note: Routes requiring parameters are handled via Navigator.push() instead
           // '/search': (context) => const SearchResultsScreen(),
           // '/car-details': (context) => const CarDetailsScreen(),
           // '/checkout': (context) => const CheckoutScreen(),
           // '/confirmation': (context) => const BookingConfirmationScreen(),
         },
+        ),
       ),
     );
   }

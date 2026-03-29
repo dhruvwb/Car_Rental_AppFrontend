@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/index.dart';
+import '../../models/index.dart';
 import '../providers/index.dart';
-import '../widgets/index.dart';
-import '../utils/pricing_constants.dart';
+import '../../widgets/index.dart';
+import '../../utils/pricing_constants.dart';
 import 'checkout_screen.dart';
 
 class CarDetailsScreen extends StatefulWidget {

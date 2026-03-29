@@ -1,6 +1,7 @@
-export 'car_service.dart';
-export 'booking_service.dart';
-export 'auth_service.dart';
+// Shared services (used across the app)
 export 'enquiry_service.dart';
 export 'geolocation_service.dart';
 export 'location_search_service.dart';
+
+// Customer services exported from customer module
+export '../customer/services/index.dart';

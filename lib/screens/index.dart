@@ -1,13 +1,5 @@
-export 'splash_screen.dart';
-export 'login_screen.dart';
-export 'location_selection_screen.dart';
-export 'simple_location_selection_screen.dart';
-export 'enhanced_location_selection_screen.dart';
-export 'dynamic_location_selection_screen.dart';
-export 'home_screen.dart';
-export 'search_results_screen.dart';
-export 'car_details_screen.dart';
-export 'checkout_screen.dart';
-export 'booking_confirmation_screen.dart';
-export 'enquiry_form_screen.dart';
-export 'enquiries_screen.dart';
+// Shared screens (used across the app)
+export 'role_selection_screen.dart';
+
+// Customer screens exported from customer module
+export '../customer/screens/index.dart';

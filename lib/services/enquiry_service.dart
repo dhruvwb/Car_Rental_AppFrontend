@@ -1,8 +1,38 @@
 import '../models/index.dart';
+import '../utils/http_client_service.dart';
+import '../utils/api_constants.dart';
 
 class EnquiryService {
+  static final EnquiryService _instance = EnquiryService._internal();
+  final _httpClient = HttpClientService();
   static final List<Enquiry> _enquiries = [];
   static final List<AppNotification> _notifications = [];
+
+  factory EnquiryService() {
+    return _instance;
+  }
+
+  EnquiryService._internal();
+
+  // Convert API response to Enquiry object
+  Enquiry _mapToEnquiry(Map<String, dynamic> data) {
+    return Enquiry(
+      id: data['id'].toString(),
+      userId: data['user_email'] ?? '',
+      pickupLocation: data['pickup_location'] ?? '',
+      dropLocation: data['drop_location'] ?? '',
+      pickupDateTime: DateTime.parse(data['pickup_datetime'] ?? DateTime.now().toIso8601String()),
+      contactName: data['contact_name'] ?? '',
+      contactPhone: data['contact_phone'] ?? '',
+      contactEmail: data['contact_email'] ?? '',
+      additionalNotes: data['additional_notes'],
+      status: data['status'] ?? 'Pending',
+      createdAt: DateTime.parse(data['created_at'] ?? DateTime.now().toIso8601String()),
+      adminResponse: data['admin_response'],
+      respondedAt: data['responded_at'] != null ? DateTime.parse(data['responded_at']) : null,
+      quotedPrice: (data['quoted_price'] ?? 0.0).toDouble(),
+    );
+  }
 
   // Create a new enquiry
   Future<Enquiry?> createEnquiry({
@@ -14,62 +44,113 @@ class EnquiryService {
     required String contactPhone,
     required String contactEmail,
     String? additionalNotes,
+    int? numPeople,
+    int? numCars,
   }) async {
-    await Future.delayed(Duration(milliseconds: 500));
+    try {
+      final response = await _httpClient.post(
+        ApiConstants.createEnquiryEndpoint,
+        {
+          'pickup_location': pickupLocation,
+          'drop_location': dropLocation,
+          'pickup_datetime': pickupDateTime.toIso8601String(),
+          'contact_name': contactName,
+          'contact_phone': contactPhone,
+          'contact_email': contactEmail,
+          'additional_notes': additionalNotes,
+          'num_people': numPeople ?? 1,
+          'num_cars': numCars ?? 1,
+        },
+        includeAuth: true,
+      );
 
-    final enquiry = Enquiry(
-      id: 'ENQ-${DateTime.now().millisecondsSinceEpoch}',
-      userId: userId,
-      pickupLocation: pickupLocation,
-      dropLocation: dropLocation,
-      pickupDateTime: pickupDateTime,
-      contactName: contactName,
-      contactPhone: contactPhone,
-      contactEmail: contactEmail,
-      additionalNotes: additionalNotes,
-      status: 'Pending',
-      createdAt: DateTime.now(),
-    );
+      final enquiry = _mapToEnquiry(response as Map<String, dynamic>);
+      _enquiries.add(enquiry);
 
-    _enquiries.add(enquiry);
+      // Create notification
+      final notification = AppNotification(
+        id: 'NOTIF-${DateTime.now().millisecondsSinceEpoch}',
+        userId: userId,
+        enquiryId: enquiry.id,
+        title: 'Enquiry Submitted',
+        message: 'Your enquiry from $pickupLocation to $dropLocation has been submitted.',
+        type: 'enquiry_created',
+        isRead: false,
+        createdAt: DateTime.now(),
+      );
 
-    // Create notification
-    final notification = AppNotification(
-      id: 'NOTIF-${DateTime.now().millisecondsSinceEpoch}',
-      userId: userId,
-      enquiryId: enquiry.id,
-      title: 'Enquiry Submitted',
-      message: 'Your enquiry from $pickupLocation to $dropLocation has been submitted.',
-      type: 'enquiry_created',
-      isRead: false,
-      createdAt: DateTime.now(),
-    );
+      _notifications.add(notification);
 
-    _notifications.add(notification);
-
-    return enquiry;
+      return enquiry;
+    } catch (e) {
+      print('Error creating enquiry: $e');
+      rethrow;
+    }
   }
 
   // Get all enquiries for a user
   Future<List<Enquiry>> getUserEnquiries(String userId) async {
-    await Future.delayed(Duration(milliseconds: 300));
-    return _enquiries.where((e) => e.userId == userId).toList();
+    try {
+      final response = await _httpClient.get(
+        ApiConstants.getUserEnquiriesEndpoint,
+        includeAuth: true,
+      );
+
+      final List<dynamic> enquiriesList = response as List<dynamic>;
+      _enquiries.clear();
+      
+      final enquiries = enquiriesList.map((item) {
+        final enquiry = _mapToEnquiry(item as Map<String, dynamic>);
+        _enquiries.add(enquiry);
+        return enquiry;
+      }).toList();
+
+      return enquiries;
+    } catch (e) {
+      print('Error fetching user enquiries: $e');
+      // Return cached enquiries if available
+      return _enquiries.where((e) => e.userId == userId).toList();
+    }
   }
 
   // Get enquiry by ID
   Future<Enquiry?> getEnquiryById(String id) async {
-    await Future.delayed(Duration(milliseconds: 300));
     try {
-      return _enquiries.firstWhere((e) => e.id == id);
+      final response = await _httpClient.get(
+        '${ApiConstants.getEnquiryByIdEndpoint}/$id',
+        includeAuth: true,
+      );
+
+      final enquiry = _mapToEnquiry(response as Map<String, dynamic>);
+      return enquiry;
     } catch (e) {
-      return null;
+      print('Error fetching enquiry: $e');
+      try {
+        return _enquiries.firstWhere((e) => e.id == id);
+      } catch (e) {
+        return null;
+      }
     }
   }
 
   // Admin: Get all enquiries
   Future<List<Enquiry>> getAllEnquiries() async {
-    await Future.delayed(Duration(milliseconds: 300));
-    return _enquiries;
+    try {
+      final response = await _httpClient.get(
+        ApiConstants.getAllEnquiriesAdminEndpoint,
+        includeAuth: true,
+      );
+
+      final List<dynamic> enquiriesList = response as List<dynamic>;
+      final allEnquiries = enquiriesList.map((item) {
+        return _mapToEnquiry(item as Map<String, dynamic>);
+      }).toList();
+
+      return allEnquiries;
+    } catch (e) {
+      print('Error fetching all enquiries: $e');
+      return [];
+    }
   }
 
   // Admin: Respond to enquiry
@@ -78,45 +159,57 @@ class EnquiryService {
     required String response,
     required double quotedPrice,
   }) async {
-    await Future.delayed(Duration(milliseconds: 500));
-
     try {
-      final index = _enquiries.indexWhere((e) => e.id == enquiryId);
-      if (index != -1) {
-        final enquiry = _enquiries[index];
-        _enquiries[index] = Enquiry(
-          id: enquiry.id,
-          userId: enquiry.userId,
-          pickupLocation: enquiry.pickupLocation,
-          dropLocation: enquiry.dropLocation,
-          pickupDateTime: enquiry.pickupDateTime,
-          contactName: enquiry.contactName,
-          contactPhone: enquiry.contactPhone,
-          contactEmail: enquiry.contactEmail,
-          additionalNotes: enquiry.additionalNotes,
-          status: 'Responded',
-          createdAt: enquiry.createdAt,
-          adminResponse: response,
-          respondedAt: DateTime.now(),
-          quotedPrice: quotedPrice,
-        );
+      await _httpClient.post(
+        '${ApiConstants.respondToEnquiryEndpoint}/$enquiryId/respond',
+        {
+          'adminResponse': response,
+          'quotedPrice': quotedPrice,
+        },
+        includeAuth: true,
+      );
 
-        // Create notification for response
-        final notification = AppNotification(
-          id: 'NOTIF-${DateTime.now().millisecondsSinceEpoch}',
-          userId: enquiry.userId,
-          enquiryId: enquiryId,
-          title: 'Admin Response',
-          message: 'Admin has responded to your enquiry. Quoted price: ₹$quotedPrice',
-          type: 'admin_response',
-          isRead: false,
-          createdAt: DateTime.now(),
-        );
+      // Update local cache
+      try {
+        final index = _enquiries.indexWhere((e) => e.id == enquiryId);
+        if (index != -1) {
+          final enquiry = _enquiries[index];
+          _enquiries[index] = Enquiry(
+            id: enquiry.id,
+            userId: enquiry.userId,
+            pickupLocation: enquiry.pickupLocation,
+            dropLocation: enquiry.dropLocation,
+            pickupDateTime: enquiry.pickupDateTime,
+            contactName: enquiry.contactName,
+            contactPhone: enquiry.contactPhone,
+            contactEmail: enquiry.contactEmail,
+            additionalNotes: enquiry.additionalNotes,
+            status: 'Responded',
+            createdAt: enquiry.createdAt,
+            adminResponse: response,
+            respondedAt: DateTime.now(),
+            quotedPrice: quotedPrice,
+          );
 
-        _notifications.add(notification);
-        return true;
+          // Create notification for response
+          final notification = AppNotification(
+            id: 'NOTIF-${DateTime.now().millisecondsSinceEpoch}',
+            userId: enquiry.userId,
+            enquiryId: enquiryId,
+            title: 'Admin Response',
+            message: 'Admin has responded to your enquiry. Quoted price: ₹$quotedPrice',
+            type: 'admin_response',
+            isRead: false,
+            createdAt: DateTime.now(),
+          );
+
+          _notifications.add(notification);
+        }
+      } catch (e) {
+        print('Error updating local cache: $e');
       }
-      return false;
+
+      return true;
     } catch (e) {
       print('Error responding to enquiry: $e');
       return false;
@@ -152,38 +245,7 @@ class EnquiryService {
       }
       return false;
     } catch (e) {
-      return false;
-    }
-  }
-
-  // Cancel enquiry
-  Future<bool> cancelEnquiry(String enquiryId) async {
-    await Future.delayed(Duration(milliseconds: 200));
-
-    try {
-      final index = _enquiries.indexWhere((e) => e.id == enquiryId);
-      if (index != -1) {
-        final enquiry = _enquiries[index];
-        _enquiries[index] = Enquiry(
-          id: enquiry.id,
-          userId: enquiry.userId,
-          pickupLocation: enquiry.pickupLocation,
-          dropLocation: enquiry.dropLocation,
-          pickupDateTime: enquiry.pickupDateTime,
-          contactName: enquiry.contactName,
-          contactPhone: enquiry.contactPhone,
-          contactEmail: enquiry.contactEmail,
-          additionalNotes: enquiry.additionalNotes,
-          status: 'Cancelled',
-          createdAt: enquiry.createdAt,
-          adminResponse: enquiry.adminResponse,
-          respondedAt: enquiry.respondedAt,
-          quotedPrice: enquiry.quotedPrice,
-        );
-        return true;
-      }
-      return false;
-    } catch (e) {
+      print('Error marking notification as read: $e');
       return false;
     }
   }

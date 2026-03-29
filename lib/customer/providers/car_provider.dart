@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/index.dart';
+import '../../models/index.dart';
 import '../services/index.dart';
 
 class CarProvider extends ChangeNotifier {
@@ -13,6 +13,7 @@ class CarProvider extends ChangeNotifier {
   // Getters
   List<Car> get allCars => _allCars;
   List<Car> get searchResults => _searchResults;
+  List<Car> get filteredCars => _searchResults.isNotEmpty ? _searchResults : _allCars;
   Car? get selectedCar => _selectedCar;
   bool get isLoading => _isLoading;
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/index.dart';
-import '../widgets/index.dart';
+import '../../models/index.dart';
+import '../../widgets/index.dart';
 import 'home_screen.dart';
 
 class BookingConfirmationScreen extends StatelessWidget {

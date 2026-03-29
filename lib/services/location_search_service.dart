@@ -1,147 +1,95 @@
-import 'package:geocoding/geocoding.dart' as gc;
-import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/location.dart';
+import 'dart:math' as math;
 
 class LocationSearchService {
-  static const String nominatimBaseUrl = 'https://nominatim.openstreetmap.org/search';
+  static const String _nominatimBaseUrl = 'https://nominatim.openstreetmap.org';
 
-  /// Search for locations by name using Nominatim API with defensive error handling
+  /// Search for locations using Nominatim API
   static Future<List<Location>> searchLocations(String query) async {
-    if (query.trim().isEmpty) {
+    if (query.isEmpty) {
       return [];
     }
 
     try {
-      final encodedQuery = Uri.encodeComponent(query);
-      final url = '$nominatimBaseUrl?q=$encodedQuery&format=json&limit=10&countrycodes=in&addressdetails=1';
-      
       final response = await http.get(
-        Uri.parse(url),
+        Uri.parse(
+          '$_nominatimBaseUrl/search?q=$query&format=json&limit=10',
+        ),
         headers: {
-          'User-Agent': 'CarRentalApp/1.0',
-          'Accept': 'application/json',
+          'User-Agent': 'CarRental/1.0',
         },
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final decoded = json.decode(response.body);
-        
-        if (decoded is! List) return [];
-        if ((decoded as List).isEmpty) return [];
-
-        final locations = <Location>[];
-        final results = decoded as List;
-        
-        for (var i = 0; i < results.length; i++) {
-          try {
-            final result = results[i];
-            
-            // Safely extract values with null-safe operators
-            String name = 'Unknown';
-            String state = 'India';
-            String displayName = 'Unknown';
-            double lat = 0.0;
-            double lon = 0.0;
-            
-            // Extract name - try multiple fields
-            if (result['name'] is String) {
-              name = result['name'] as String;
-            } else if (result['address'] is Map) {
-              final addr = result['address'] as Map?;
-              final city = addr?['city'];
-              final town = addr?['town'];
-              final village = addr?['village'];
-              if (city is String) name = city;
-              else if (town is String) name = town;
-              else if (village is String) name = village;
-            }
-            
-            // Extract state
-            if (result['address'] is Map) {
-              final addr = result['address'] as Map?;
-              final state_val = addr?['state'];
-              final province = addr?['province'];
-              if (state_val is String) {
-                state = state_val;
-              } else if (province is String) {
-                state = province;
-              }
-            }
-            
-            // Extract coordinates
-            final latStr = result['lat'];
-            final lonStr = result['lon'];
-            if (latStr != null && lonStr != null) {
-              lat = double.tryParse(latStr.toString()) ?? 0.0;
-              lon = double.tryParse(lonStr.toString()) ?? 0.0;
-            }
-            
-            // Extract display name
-            if (result['display_name'] is String) {
-              displayName = result['display_name'] as String;
-            }
-
-            // Only add valid locations
-            if (lat != 0.0 && lon != 0.0) {
-              locations.add(Location(
-                id: result['osm_id']?.toString() ?? 'unknown',
-                name: name,
-                city: state,
-                latitude: lat,
-                longitude: lon,
-                address: displayName,
-              ));
-            }
-          } catch (e) {
-            print('[LocationSearch] Parse error at $i: $e');
-          }
-        }
-
-        return locations;
+        final List<dynamic> results = jsonDecode(response.body);
+        return results
+            .map((json) => Location(
+                  id: json['osm_id']?.toString() ?? 'loc_${DateTime.now().millisecondsSinceEpoch}',
+                  name: json['display_name'] ?? 'Unknown',
+                  latitude: double.parse(json['lat'] ?? '0'),
+                  longitude: double.parse(json['lon'] ?? '0'),
+                  city: _extractCity(json['display_name'] ?? ''),
+                  address: json['display_name'] ?? 'Unknown',
+                  state: _extractState(json['display_name'] ?? ''),
+                ))
+            .toList();
       }
       return [];
     } catch (e) {
-      print('[LocationSearch] Error: $e');
+      print('Error searching locations: $e');
       return [];
     }
   }
 
-  /// Calculate distance between two coordinates in kilometers
-  static double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    try {
-      final distanceInMeters = Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
-      return distanceInMeters / 1000;
-    } catch (e) {
-      print('[Distance] Error: $e');
-      return 0.0;
-    }
+  /// Calculate distance between two coordinates using Haversine formula
+  static double calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const double R = 6371; // Earth's radius in kilometers
+
+    final double dLat = _toRadians(lat2 - lat1);
+    final double dLon = _toRadians(lon2 - lon1);
+
+    final double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(lat1)) *
+            math.cos(_toRadians(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+
+    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    final double distance = R * c;
+
+    return distance;
   }
 
-  /// Get current location coordinates
-  static Future<({double lat, double lon})?> getCurrentLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return null;
+  static double _toRadians(double degrees) {
+    return degrees * math.pi / 180;
+  }
 
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return null;
-      }
-
-      if (permission == LocationPermission.deniedForever) return null;
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      return (lat: position.latitude, lon: position.longitude);
-    } catch (e) {
-      print('[CurrentLocation] Error: $e');
-      return null;
+  static String _extractCity(String displayName) {
+    // Extract city name from display_name
+    final parts = displayName.split(',');
+    if (parts.isNotEmpty) {
+      // Get the second or first part as city
+      final city = parts.length > 1 ? parts[1].trim() : parts[0].trim();
+      return city;
     }
+    return displayName;
+  }
+
+  static String _extractState(String displayName) {
+    // Extract state name from display_name
+    final parts = displayName.split(',');
+    if (parts.length >= 3) {
+      return parts[2].trim();
+    } else if (parts.length >= 2) {
+      return parts[1].trim();
+    }
+    return '';
   }
 }
-

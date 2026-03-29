@@ -1,4 +1,3 @@
-export 'car_provider.dart';
-export 'booking_provider.dart';
-export 'auth_provider.dart';
-export 'location_provider.dart';
+export 'notification_provider.dart';
+// Customer providers exported from customer module
+export '../customer/providers/index.dart';

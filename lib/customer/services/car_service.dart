@@ -1,6 +1,6 @@
-import '../models/index.dart';
-import '../utils/http_client_service.dart';
-import '../utils/api_constants.dart';
+import '../../models/index.dart';
+import '../../utils/http_client_service.dart';
+import '../../utils/api_constants.dart';
 
 class CarService {
   static final CarService _instance = CarService._internal();
